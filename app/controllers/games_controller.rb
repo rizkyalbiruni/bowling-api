@@ -1,21 +1,22 @@
 class GamesController < ApplicationController
-  before_action :set_game, only: %i[ show update destroy ]
+  before_action :set_game, only: %i[show update destroy]
 
   # GET /games
   def index
     @games = Game.all
+    # rendering all game instances in json format
     render json: @games
   end
 
   # GET /games/1
   def show
-    render json: @game
+    # this will scope the one specific game and all its children
+    render json: @game, include: '**'
   end
 
   # POST /games
   def create
     @game = Game.new(game_params)
-
     if @game.save
       render json: @game, status: :created, location: @game
     else
@@ -23,8 +24,11 @@ class GamesController < ApplicationController
     end
   end
 
-  # PATCH/PUT /games/1
+  # PATCH/PUT /games/:id
   def update
+    # set_game
+    # soal : the attribute of game which is current_game(int) is not used insted we use game.frames.find_by ???
+    # @game.current_frame = 
     @current_frame = @game.frames.find_by(frame_nth: params[:frame_nth])
 
     unless @current_frame
@@ -32,19 +36,20 @@ class GamesController < ApplicationController
       @current_frame.save
     end
 
-    @max_throws = (@current_frame.is_strike || @current_frame.is_spare) && params[:throw_nth].to_i == 2 ? 3 : 2
+    # soal : is_strike and is_spare is both false, why use it as condition?
+    @max_throws = (@current_frame.is_strike || @current_frame.is_spare) && params[:throw_nth].to_i <= 3 ? 3 : 2
 
     if params[:throw_nth].to_i <= @max_throws
       @current_throw = Throw.new(frame: @current_frame, score: params[:score], throw_nth: params[:throw_nth])
       @current_throw.save
 
       if @current_throw.score == 10 && params[:throw_nth].to_i == 1
-        @current_frame.is_strike = true
+        @current_frame.is_strike = 1
         @current_frame.save
       end
 
       if @current_throw.score == 10 && params[:throw_nth].to_i == 2 && @current_frame.is_strike == false
-        @current_frame.is_spare = true
+        @current_frame.is_spare = 1
         @current_frame.save
       end
     end
@@ -53,28 +58,27 @@ class GamesController < ApplicationController
     @current_frame.save
 
     @game.total_score = @game.frames.sum(:total_score)
-    @game.save
 
-    if @game.update(game_params)
+    if @game.save
       render json: @game
     else
       render json: @game.errors, status: :unprocessable_entity
     end
   end
 
-  # DELETE /games/1
   def destroy
     @game.destroy!
   end
 
   private
-    # Use callbacks to share common setup or constraints between actions.
-    def set_game
-      @game = Game.find(params[:id])
-    end
 
-    # Only allow a list of trusted parameters through.
-    def game_params
-      params.require(:game).permit(:id)
-    end
+  # setting the game for show, update and destroy
+  def set_game
+    @game = Game.find(params[:id])
+  end
+
+  # strongg params
+  def game_params
+    params.require(:game).permit(:total_score, :current_frame)
+  end
 end
