@@ -11,6 +11,8 @@ class GamesController < ApplicationController
   # GET /games/1
   def show
     # this will scope the one specific game and all its children
+    # pro : to provide developer more infos
+    # con : will slow down the response time
     render json: @game, include: '**'
   end
 
@@ -28,7 +30,7 @@ class GamesController < ApplicationController
   def update
     # set_game
     # soal : the attribute of game which is current_game(int) is not used insted we use game.frames.find_by ???
-    # @game.current_frame = 
+    # soal : perlu  kita bataskan integer sesuai dgn peraturan game?
     @current_frame = @game.frames.find_by(frame_nth: params[:frame_nth])
 
     unless @current_frame
@@ -37,6 +39,7 @@ class GamesController < ApplicationController
     end
 
     # soal : is_strike and is_spare is both false, why use it as condition?
+    # the first throw will always be false and result 2
     @max_throws = (@current_frame.is_strike || @current_frame.is_spare) && params[:throw_nth].to_i <= 3 ? 3 : 2
 
     if params[:throw_nth].to_i <= @max_throws
@@ -44,12 +47,12 @@ class GamesController < ApplicationController
       @current_throw.save
 
       if @current_throw.score == 10 && params[:throw_nth].to_i == 1
-        @current_frame.is_strike = 1
+        @current_frame.is_strike = 1 # true
         @current_frame.save
       end
 
       if @current_throw.score == 10 && params[:throw_nth].to_i == 2 && @current_frame.is_strike == false
-        @current_frame.is_spare = 1
+        @current_frame.is_spare = 1 # true
         @current_frame.save
       end
     end
